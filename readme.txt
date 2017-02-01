@@ -1,1 +1,0 @@
-Please open this mp in Brackets! Otherwise it might not work!
