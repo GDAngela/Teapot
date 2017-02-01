@@ -1,0 +1,153 @@
+<!DOCTYPE HTML> 
+<html lang="en"> 
+<head>
+<title>hello teapot </title>
+<meta charset="utf-8"> 
+</head>
+<style type="text/css">
+        .description {
+            position: absolute;
+            top: 40px;
+            left: 20px;
+            z-index: 1000;
+            color:white;
+        }
+    </style>
+       
+ <script id="terrain-vs" type="x-shader/x-vertex">
+   attribute vec3 aVertexPositiont;
+   attribute vec2 aTexCoord;
+   
+   uniform mat4 uMVMatrixt;
+   uniform mat4 uPMatrixt;
+   uniform mat3 uNMatrixt;
+
+   uniform sampler2D uImage;
+   varying vec4 vPosition;
+   varying vec4 vColor;
+   varying vec2 vTexCoord;
+   varying vec4 vtexColor;
+   const float shininess = 32.0;
+   
+   void main(void) {  
+     vPosition = vec4(aVertexPositiont, 1.0);
+     vPosition.z = texture2D(uImage, aTexCoord).z -1.0;
+     gl_Position= uPMatrixt*uMVMatrixt*vPosition;
+     vTexCoord= aTexCoord;
+     vtexColor =texture2D(uImage, aTexCoord);
+ 
+    }
+</script>
+   
+ <script id="terrain-fs" type="x-shader/x-fragment">
+precision mediump float;
+ 
+// Passed in from the vertex shader.
+varying vec4 vColor;
+varying vec2 vTexCoord;
+varying vec4 vtexColor;
+
+void main() {
+        vec3 cf,ct;
+        float af, at;
+        cf=vColor.rgb;
+        af=vColor.a;
+        ct=vtexColor.rgb;
+        at=vtexColor.a;
+        gl_FragColor=vtexColor;
+}
+</script>   
+    
+<script id="shader-vs" type="x-shader/x-vertex">
+   attribute vec3 aVertexPosition;
+   attribute vec3 aVertexNormal;
+   
+   uniform mat4 uMVMatrix;
+   uniform mat4 uPMatrix;
+   uniform mat3 uNMatrix;
+
+   varying vec4 vColor;
+   varying vec4 vPosition;
+   varying vec3 vTransformedNormal;
+   
+   uniform vec3 uLightPosition;
+   uniform vec3 uAmbientLightColor;
+   uniform vec3 uDiffuseLightColor;
+   uniform vec3 uSpecularLightColor;
+   const float shininess = 0.5;
+   void main(void) { 
+    
+     vPosition = uMVMatrix*vec4(aVertexPosition, 1.0);
+     gl_Position= uPMatrix*vPosition;
+     vTransformedNormal = uNMatrix*aVertexNormal;
+     
+     vec4 vertexPositionEye4 = uMVMatrix * vec4(aVertexPosition, 1.0);
+     vec3 vertexPositionEye3 = vertexPositionEye4.xyz / vertexPositionEye4.w;
+  
+    // Calculate the vector (l) to the light source
+    vec3 vectorToLightSource = normalize(uLightPosition - vertexPositionEye3);
+    
+    // Transform the normal (n) to eye coordinates
+    vec3 normalEye = normalize(uNMatrix * aVertexNormal);
+    
+    // Calculate n dot l for diffuse lighting
+    float diffuseLightWeightning = max(dot(normalEye, 
+                                    vectorToLightSource), 0.0);
+                                       
+    // Calculate the reflection vector (r) that is needed for specular light
+    vec3 reflectionVector = normalize(reflect(-vectorToLightSource, 
+                                             normalEye));
+    
+    vec3 viewVectorEye = -normalize(vertexPositionEye3);
+    
+    float rdotv = max(dot(reflectionVector, viewVectorEye), 0.0);
+    
+    float specularLightWeightning = pow(rdotv, shininess);
+
+    // Sum up all three reflection components and send to the fragment shader
+    vColor = vec4((uAmbientLightColor
+                + uDiffuseLightColor * diffuseLightWeightning
+                + uSpecularLightColor * specularLightWeightning),1.0);
+    
+    }
+</script>
+  
+<script id="shader-fs" type="x-shader/x-fragment">
+precision mediump float;
+varying vec4 vColor;
+
+// Passed in from the vertex shader.
+varying vec4 vPosition;
+varying vec3 vTransformedNormal;
+ 
+// The texture.
+uniform samplerCube uCubeSampler;
+ 
+void main() {
+
+  vec3 normal = normalize(vTransformedNormal);
+  vec3 eyeDirection = normalize(-vPosition.xyz);
+  vec3 lookup = reflect(eyeDirection, normal);
+  gl_FragColor = textureCube(uCubeSampler, -lookup)+ vColor;
+}
+</script>
+
+<script src="jquery-2.1.0.min.js"></script>
+<script src="gl-matrix-min.js"></script> 
+<script src="webgl-utils.js"></script>   
+<script src="terrainModeling.js"></script>  
+<script src="teapot.js"></script>
+<script src="Terrian.js"></script>
+<script src="index.js"></script> 
+    
+    
+<div class="description">
+        CS418 MP 3 - Teapot<br>
+        Jingjing Huang<br>
+        
+    </div>
+
+<body onload="startup();">
+<canvas id="myGLCanvas" width="1280" height="800"></canvas>
+</body>
+</html>
